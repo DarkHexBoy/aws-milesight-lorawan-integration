@@ -1,5 +1,4 @@
-### **AWS Milesight LoRaWAN Integration**  
-_DeepSeek + Kimi + ChatGPT 联合开发_  
+### **AWS Milesight LoRaWAN Integration**   
 
 ## **主要功能**  
 1. **UG65 连接 AWS IoT Core**  
