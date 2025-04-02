@@ -8,4 +8,4 @@ deepseek + kimi + chatgpt 联合开发
 4. 所有代码目前比较粗糙，仅供参考
 
 
-非 Administrator 用户的情况下需要的权限，参考 permission.txt 文旦
+非 Administrator 用户的情况下需要的权限，参考 permission.txt 文档。
