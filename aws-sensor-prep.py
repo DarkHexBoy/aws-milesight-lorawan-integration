@@ -206,7 +206,9 @@ def create_lambda_execution_role():
             "Statement": [
                 {
                     "Effect": "Allow",
-                    "Action": ["iot:Publish"],
+                    "Action": [
+                        "iot:Publish",
+                        "iot:DescribeEndpoint"],
                     "Resource": ["*"]  # 允许对所有 IoT 主题发布消息
                 }
             ]
