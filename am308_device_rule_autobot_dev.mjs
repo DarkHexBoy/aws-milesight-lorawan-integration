@@ -3,8 +3,8 @@ import { Buffer } from 'buffer';
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { TimestreamWriteClient, WriteRecordsCommand } from "@aws-sdk/client-timestream-write";
 
-const s3 = new S3Client({ region: "us-east-1" }); // 替换 region
-const BUCKET_NAME = "support-lockon"; // 替换 Bucket 名称
+const s3 = new S3Client({ region: "us-east-1" });
+const BUCKET_NAME = "support-lockon";
 const DATABASE_NAME = "sampleDB-lockon";
 const TABLE_NAME = "table_am308_sensor_data";
 const timestreamClient = new TimestreamWriteClient({ region: 'us-east-1' });
@@ -23,13 +23,18 @@ export const handler = async (event) => {
             endpoint: 'https://a385rrmxek726j-ats.iot.us-east-1.amazonaws.com',
             region: 'us-east-1'
         });
+        params.devEui = event.WirelessMetadata.LoRaWAN.DevEui;
+        
+        // console.log("DEBUG: full event = ", JSON.stringify(event));
+        params.payloadData = Buffer.from(event.PayloadData, 'base64').toString('hex') || 'payload missing';
+        
 
         // const iotdata = new IoTDataPlaneClient({
         //     endpoint: 'https://a385rrmxek726j-ats.iot.us-east-1.amazonaws.com', 
         //     region: 'us-east-1' 
         // });
 
-        // 发布到 topic
+        // publish to mqtt topic
         const response = {
             topic: `${event.WirelessMetadata.LoRaWAN.DevEui}/project/sensor/decoded`,
             payload: JSON.stringify(params),
@@ -39,7 +44,8 @@ export const handler = async (event) => {
         await iotdata.send(command);
         console.log("Published data: ", response);
 
-        // 写入 s3
+
+        // write data to s3 bucket 
         const now = new Date();
         const timestamp = now.toISOString();
         const key = `iot-data/${event.WirelessMetadata.LoRaWAN.DevEui}/${timestamp}.json`;
@@ -53,16 +59,16 @@ export const handler = async (event) => {
         console.log("Data written to S3: ", key);
 
 
-        // 写入 Timestream
+        // write to Timestream database
         const timestampNs = now.getTime() * 1e6;
 
 
-        // 改用硬编码，防止解析出错
-        const records_tst = {
+        // prep TS data format
+        const tSrecords = {
             Dimensions: [
                 { Name: "Device", Value: `${event.WirelessMetadata.LoRaWAN.DevEui}` }
             ],
-            MeasureName: "IoTMulti-stats", // 标签名称
+            MeasureName: "IoTMulti-stats", // set lable name
             MeasureValueType: "MULTI",
             MeasureValues: [
                 { Name: "temperature", Value: (params.temperature ?? 0).toString(), Type: "DOUBLE" },
@@ -80,14 +86,14 @@ export const handler = async (event) => {
             TimeUnit: "NANOSECONDS"
         };
 
-        const command_ts = new WriteRecordsCommand({
+        const tScommand = new WriteRecordsCommand({
             DatabaseName: DATABASE_NAME,
             TableName: TABLE_NAME,
-            Records: [records_tst]
+            Records: [tSrecords]
         });
 
-        const result_tst = await timestreamClient.send(command_ts);
-        console.log("Successfully wrote to Timestream:", result_tst);
+        const tSresult = await timestreamClient.send(tScommand);
+        console.log("Successfully wrote to Timestream:", tSresult);
 
         return {
             statusCode: 200,
@@ -304,7 +310,7 @@ function readInt32LE(bytes) {
 function getFormattedTimestamps() {
     const now = new Date();
 
-    // UTC 时间（固定）
+    // UTC Time -- static
     const yyyyUTC = now.getUTCFullYear();
     const MMUTC = String(now.getUTCMonth() + 1).padStart(2, '0');
     const ddUTC = String(now.getUTCDate()).padStart(2, '0');
@@ -313,7 +319,7 @@ function getFormattedTimestamps() {
     const ssUTC = String(now.getUTCSeconds()).padStart(2, '0');
     const timestamp_utc = `${yyyyUTC}-${MMUTC}-${ddUTC} ${hhUTC}:${mmUTC}:${ssUTC} UTC`;
 
-    // 指定为东八区（Asia/Shanghai）
+    // configure to +08 Time Zone as -> Asia/Shanghai
     const formatter = new Intl.DateTimeFormat('en-CA', {
         timeZone: 'Asia/Shanghai',
         year: 'numeric',
