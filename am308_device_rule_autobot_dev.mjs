@@ -1,9 +1,13 @@
 import { IoTDataPlaneClient, PublishCommand } from "@aws-sdk/client-iot-data-plane";
 import { Buffer } from 'buffer';
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { TimestreamWriteClient, WriteRecordsCommand } from "@aws-sdk/client-timestream-write";
 
 const s3 = new S3Client({ region: "us-east-1" }); // 替换 region
 const BUCKET_NAME = "support-lockon"; // 替换 Bucket 名称
+const DATABASE_NAME = "sampleDB-lockon";
+const TABLE_NAME = "table_am308_sensor_data";
+const timestreamClient = new TimestreamWriteClient({ region: 'us-east-1' });
 
 console.log('Loading function');
 
@@ -13,13 +17,13 @@ export const handler = async (event) => {
     try {
         const data = Buffer.from(event.PayloadData, 'base64');
         const chars = [...data];
-        
+
         const params = Decoder(chars, event.WirelessMetadata.LoRaWAN.FPort);
         const iotdata = new IoTDataPlaneClient({
             endpoint: 'https://a385rrmxek726j-ats.iot.us-east-1.amazonaws.com',
             region: 'us-east-1'
         });
-        
+
         // const iotdata = new IoTDataPlaneClient({
         //     endpoint: 'https://a385rrmxek726j-ats.iot.us-east-1.amazonaws.com', 
         //     region: 'us-east-1' 
@@ -48,15 +52,54 @@ export const handler = async (event) => {
         await s3.send(s3Command);
         console.log("Data written to S3: ", key);
 
+
+        // 写入 Timestream
+        const now_tst = new Date();
+        const timestampNs_tst = now_tst.getTime() * 1e6;
+
+
+        // 改用硬编码，防止解析出错
+        const records_tst = {
+            Dimensions: [
+                { Name: "Device", Value: `${event.WirelessMetadata.LoRaWAN.DevEui}` }
+            ],
+            MeasureName: "IoTMulti-stats", // 标签名称
+            MeasureValueType: "MULTI",
+            MeasureValues: [
+                { Name: "temperature", Value: (params.temperature ?? 0).toString(), Type: "DOUBLE" },
+                { Name: "humidity", Value: (params.humidity ?? 0).toString(), Type: "DOUBLE" },
+                { Name: "pir", Value: (params.pir ?? '').toString(), Type: "VARCHAR" },
+                { Name: "light_level", Value: (params.light_level ?? 0).toString(), Type: "DOUBLE" },
+                { Name: "co2", Value: (params.co2 ?? 0).toString(), Type: "DOUBLE" },
+                { Name: "tvoc", Value: (params.tvoc ?? 0).toString(), Type: "DOUBLE" },
+                { Name: "pressure", Value: (params.pressure ?? 0).toString(), Type: "DOUBLE" },
+                { Name: "pm2_5", Value: (params.pm2_5 ?? 0).toString(), Type: "DOUBLE" },
+                { Name: "pm10", Value: (params.pm10 ?? 0).toString(), Type: "DOUBLE" },
+                { Name: "battery", Value: (params.battery ?? 0).toString(), Type: "DOUBLE" }
+            ],
+            Time: timestampNs_tst.toString(),
+            TimeUnit: "NANOSECONDS"
+        };
+
+        const command_tst = new WriteRecordsCommand({
+            DatabaseName: DATABASE_NAME,
+            TableName: TABLE_NAME,
+            Records: [records_tst]
+        });
+
+        const result_tst = await timestreamClient.send(command_tst);
+        console.log("Successfully wrote to Timestream:", result_tst);
+
         return {
             statusCode: 200,
             body: JSON.stringify(params)
         };
+
     } catch (err) {
-        console.error("ERROR => ", JSON.stringify(err));
+        console.error("ERROR => ", err);
         return {
             statusCode: 500,
-            body: JSON.stringify({ error: "Failed to process the event." })
+            body: JSON.stringify({ error: "Failed to process the event.", details: err.message || err })
         };
     }
 }
@@ -74,7 +117,7 @@ function milesightDeviceDecode(bytes) {
     decoded.timestamp_utc = timestamp_utc;
     decoded.timestamp_shanghai = timestamp_shanghai;
 
-    for (var i = 0; i < bytes.length; ) {
+    for (var i = 0; i < bytes.length;) {
         var channel_id = bytes[i++];
         var channel_type = bytes[i++];
         // BATTERY
@@ -299,7 +342,3 @@ function getFormattedTimestamps() {
         timestamp_shanghai
     };
 }
-
-
-
-
