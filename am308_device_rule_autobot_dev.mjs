@@ -54,8 +54,7 @@ export const handler = async (event) => {
 
 
         // 写入 Timestream
-        const now_tst = new Date();
-        const timestampNs_tst = now_tst.getTime() * 1e6;
+        const timestampNs = now.getTime() * 1e6;
 
 
         // 改用硬编码，防止解析出错
@@ -77,17 +76,17 @@ export const handler = async (event) => {
                 { Name: "pm10", Value: (params.pm10 ?? 0).toString(), Type: "DOUBLE" },
                 { Name: "battery", Value: (params.battery ?? 0).toString(), Type: "DOUBLE" }
             ],
-            Time: timestampNs_tst.toString(),
+            Time: timestampNs.toString(),
             TimeUnit: "NANOSECONDS"
         };
 
-        const command_tst = new WriteRecordsCommand({
+        const command_ts = new WriteRecordsCommand({
             DatabaseName: DATABASE_NAME,
             TableName: TABLE_NAME,
             Records: [records_tst]
         });
 
-        const result_tst = await timestreamClient.send(command_tst);
+        const result_tst = await timestreamClient.send(command_ts);
         console.log("Successfully wrote to Timestream:", result_tst);
 
         return {
