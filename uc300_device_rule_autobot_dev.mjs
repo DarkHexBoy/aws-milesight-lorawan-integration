@@ -64,38 +64,33 @@ export const handler = async (event) => {
 
 
         // prep TS data format   -这部分需要修改，待设备到位
-        // 仓库项目只有 DI 和 DO，共计四个值，别的值暂时不考虑
-        // 代码优化工作，后续再做
-        // const tSrecords = {
-        //     Dimensions: [
-        //         { Name: "Device", Value: `${event.WirelessMetadata.LoRaWAN.DevEui}` }
-        //     ],
-        //     MeasureName: "IoTMulti-stats", // set lable name
-        //     MeasureValueType: "MULTI",
-        //     MeasureValues: [
-        //         { Name: "temperature", Value: (params.temperature ?? 0).toString(), Type: "DOUBLE" },
-        //         { Name: "humidity", Value: (params.humidity ?? 0).toString(), Type: "DOUBLE" },
-        //         { Name: "pir", Value: (params.pir ?? '').toString(), Type: "VARCHAR" },
-        //         { Name: "light_level", Value: (params.light_level ?? 0).toString(), Type: "DOUBLE" },
-        //         { Name: "co2", Value: (params.co2 ?? 0).toString(), Type: "DOUBLE" },
-        //         { Name: "tvoc", Value: (params.tvoc ?? 0).toString(), Type: "DOUBLE" },
-        //         { Name: "pressure", Value: (params.pressure ?? 0).toString(), Type: "DOUBLE" },
-        //         { Name: "pm2_5", Value: (params.pm2_5 ?? 0).toString(), Type: "DOUBLE" },
-        //         { Name: "pm10", Value: (params.pm10 ?? 0).toString(), Type: "DOUBLE" },
-        //         { Name: "battery", Value: (params.battery ?? 0).toString(), Type: "DOUBLE" }
-        //     ],
-        //     Time: timestampNs.toString(),
-        //     TimeUnit: "NANOSECONDS"
-        // };
+        // 仓库项目只有 DI 和 DO，共计六个值，别的值暂时不考虑
+        const tSrecords = {
+            Dimensions: [
+                { Name: "Device", Value: `${event.WirelessMetadata.LoRaWAN.DevEui}` }
+            ],
+            MeasureName: "IoTMulti-stats", // set lable name
+            MeasureValueType: "MULTI",
+            MeasureValues: [
+                { Name: "gpio_in_1", Value: (params.gpio_in_1 ?? 0).toString(), Type: "DOUBLE" },
+                { Name: "gpio_in_2", Value: (params.gpio_in_2 ?? 0).toString(), Type: "DOUBLE" },
+                { Name: "gpio_in_3", Value: (params.gpio_in_3 ?? 0).toString(), Type: "DOUBLE" },
+                { Name: "gpio_in_4", Value: (params.gpio_in_4 ?? 0).toString(), Type: "DOUBLE" },
+                { Name: "gpio_out_1", Value: (params.gpio_out_1 ?? 0).toString(), Type: "DOUBLE" },
+                { Name: "gpio_out_2", Value: (params.gpio_out_2 ?? 0).toString(), Type: "DOUBLE" }
+            ],
+            Time: timestampNs.toString(),
+            TimeUnit: "NANOSECONDS"
+        };
 
-        // const tScommand = new WriteRecordsCommand({
-        //     DatabaseName: DATABASE_NAME,
-        //     TableName: TABLE_NAME,
-        //     Records: [tSrecords]
-        // });
+        const tScommand = new WriteRecordsCommand({
+            DatabaseName: DATABASE_NAME,
+            TableName: TABLE_NAME,
+            Records: [tSrecords]
+        });
 
-        // const tSresult = await timestreamClient.send(tScommand);
-        // console.log("Successfully wrote to Timestream:", tSresult);
+        const tSresult = await timestreamClient.send(tScommand);
+        console.log("Successfully wrote to Timestream:", tSresult);
 
         return {
             statusCode: 200,
@@ -520,9 +515,14 @@ function readResetEvent(status) {
     return getValue(status_map, status);
 }
 
+// function readOnOffStatus(status) {
+//     var status_map = { 0: "0", 1: "1" };
+//     return getValue(status_map, status);
+// }
+
 function readOnOffStatus(status) {
-    var status_map = { 0: "off", 1: "on" };
-    return getValue(status_map, status);
+    // Return numeric 0 for "off" and 1 for "on"
+    return status === 0 ? 0 : 1;
 }
 
 function numToBits(num, bit_count) {
