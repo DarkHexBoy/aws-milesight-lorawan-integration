@@ -1,65 +1,58 @@
 {
-    "Effect": "Allow",
-    "Action": [
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
         "iotevents:CreateDetectorModel",
         "iotevents:DescribeDetectorModel",
         "iotevents:UpdateDetectorModel",
         "iotevents:DeleteDetectorModel"
-    ],
-    "Resource": "*"
-}
-
-
-{
-    "Effect": "Allow",
-    "Action": [
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
         "lambda:AddPermission",
         "lambda:RemovePermission",
         "lambda:InvokeFunction"
-    ],
-    "Resource": "arn:aws:lambda:*:*:function:am308_device_rule_autobot_dev"
-}
-
-
-{
-    "Effect": "Allow",
-    "Action": [
+      ],
+      "Resource": "arn:aws:lambda:*:*:function:am308_device_rule_autobot_dev"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
         "iam:GetRole",
         "iam:PassRole"
-    ],
-    "Resource": "arn:aws:iam::*:role/LambdaExecutionRoleCreateByAutobot"
-}
-
-
-{
-    "Effect": "Allow",
-    "Action": [
+      ],
+      "Resource": "arn:aws:iam::*:role/LambdaExecutionRoleCreateByAutobot"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
         "iot:CreateTopicRule",
         "iot:GetTopicRule",
         "iot:DeleteTopicRule",
         "iot:ReplaceTopicRule",
         "iot:AttachPrincipalPolicy",
         "iot:Publish"
-    ],
-    "Resource": "*"
-}
-
-
-{
-    "Effect": "Allow",
-    "Action": [
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
         "iotwireless:CreateDestination",
         "iotwireless:GetDestination",
         "iotwireless:ListDestinations",
         "iotwireless:DeleteDestination"
-    ],
-    "Resource": "*"
-}
-
-
-{
-    "Effect": "Allow",
-    "Action": [
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
         "iotwireless:CreateDeviceProfile",
         "iotwireless:GetDeviceProfile",
         "iotwireless:DeleteDeviceProfile",
@@ -70,13 +63,91 @@
         "iotwireless:GetWirelessDevice",
         "iotwireless:ListWirelessDevices",
         "iotwireless:DeleteWirelessDevice"
-    ],
-    "Resource": "*"
-}
-
-
-{
-    "Effect": "Allow",
-    "Action": "sts:GetCallerIdentity",
-    "Resource": "*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "sts:GetCallerIdentity",
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "s3:*",
+      "Resource": "arn:aws:s3:::*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "iot:Publish",
+        "iot:DescribeEndpoint"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "iot:Connect",
+        "iot:Publish",
+        "iot:Subscribe",
+        "iot:Receive",
+        "iot:GetThingShadow",
+        "iot:UpdateThingShadow",
+        "iot:DeleteThingShadow",
+        "iot:ListNamedShadowsForThing"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "timestream:*",
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "kms:DescribeKey",
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "kms:CreateGrant",
+      "Resource": "*",
+      "Condition": {
+        "ForAnyValue:StringEquals": {
+          "kms:EncryptionContextKeys": "aws:timestream:database-name"
+        },
+        "Bool": {
+          "kms:GrantIsForAWSResource": true
+        },
+        "StringLike": {
+          "kms:ViaService": "timestream.*.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "s3:ListAllMyBuckets",
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": [
+          "lambda.amazonaws.com",
+          "iotwireless.amazonaws.com",
+          "iot.amazonaws.com"
+        ]
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
 }
