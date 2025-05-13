@@ -9,16 +9,16 @@ from datetime import datetime
 import configparser
 
 # ================================
-# Configure AWS credentials
+# Configure AWS authentication information
 # ================================
-AWS_ACCESS_KEY = "not telling you"
-AWS_SECRET_KEY = "not telling you"
+AWS_ACCESS_KEY = "xxxx"
+AWS_SECRET_KEY = "xxxx"
 REGION = "us-east-1"  # Select the region where AWS IoT Core is located
 SERVICE = "iotwireless"
 HOST = f"{SERVICE}.{REGION}.amazonaws.com"
 ENDPOINT = f"https://{HOST}"
 
-# Initialize AWS clients
+# Initialize AWS client
 session = boto3.Session(
     aws_access_key_id=AWS_ACCESS_KEY,
     aws_secret_access_key=AWS_SECRET_KEY,
@@ -34,10 +34,10 @@ config_filename = "aws.ini"
 # **1. Create LoRaWAN Gateway**
 # ================================
 gateway_params = {
-    "Name": "Lockon-UG65-70.211",
+    "Name": "Charles-UG65-45.158",
     "Description": "LoRaWAN Gateway created by Python app and Managed by Autobot",
     "LoRaWAN": {
-        "GatewayEui": "24E124FFFEFA3300",  # Gateway EUI
+        "GatewayEui": "24E124FFFEF0E228",  # Gateway EUI
         "RfRegion": "US915"
     },
 }
@@ -45,9 +45,9 @@ gateway_params = {
 try:
     response = client.create_wireless_gateway(**gateway_params)
     gateway_id = response["Id"]
-    print("✅ LoRaWAN gateway created successfully:", json.dumps(response, indent=4))
+    print("✅ LoRaWAN Gateway created successfully:", json.dumps(response, indent=4))
 
-    # For temporary debugging, skip creation
+    # Temporary debugging, not creating for now
     # gateway_id = "c5282b3e-5d75-448f-bf5e-c130658bd6e7"
 
     # Get gateway information (including CUPS and LNS)
@@ -62,8 +62,9 @@ except Exception as e:
     exit(-1)
 
 
+
 # ================================
-# **2. Get CUPS/LNS addresses**
+# **2. Get CUPS/LNS Address**
 # ================================
 def save_to_config_file(cups_endpoint, lns_endpoint):
     config = configparser.ConfigParser()
@@ -74,21 +75,21 @@ def save_to_config_file(cups_endpoint, lns_endpoint):
         'LNS': lns_endpoint
     }
     
-    # Check if config file exists; if yes, back it up
+    # Check if the configuration file exists, if it does, back it up
     if os.path.exists(config_filename):
         backup_filename = f"aws.ini.bak.{timestamp}"
         try:
             shutil.copy(config_filename, backup_filename)
             print(f"✅ Configuration file backed up: {backup_filename}")
             
-            # Delete original config file
+            # Delete the original configuration file
             os.remove(config_filename)
-            print("✅ Original configuration file deleted")
+            print("✅ Original configuration file deleted successfully")
         except Exception as e:
-            print(f"❌ Failed to back up or delete config file: {str(e)}")
+            print(f"❌ Failed to back up or delete configuration file: {str(e)}")
             exit(-2)
 
-    # Create new config file
+    # Create a new configuration file
     try:
         with open(config_filename, "w") as config_file:
             config.write(config_file)
@@ -114,11 +115,11 @@ try:
     save_to_config_file(CUPS_Endpoint, LNS_Endpoint)
 
 except Exception as e:
-    print("❌ Failed to retrieve CUPS/LNS:", str(e))
+    print("❌ Failed to get CUPS/LNS:", str(e))
     exit(-4)
 
 # ================================
-# **3. Download root certificate and save to file**
+# **3. Download Root Certificate and Save to File**
 # ================================
 def download_root_cert(cert_url, cert_filename):
     try:
@@ -135,11 +136,11 @@ def download_root_cert(cert_url, cert_filename):
         exit(-5)
 
 # ================================
-# **4. Create certificate and attach to gateway**
+# **4. Create Certificate and Associate with Gateway**
 # ================================
 def save_certificate_to_files(certificate_pem, private_key, certificate_arn):
     try:
-        # Create timestamped directory
+        # Create timestamp directory
         cert_folder = f"cert-{timestamp}"
 
         # Create folder
@@ -155,7 +156,7 @@ def save_certificate_to_files(certificate_pem, private_key, certificate_arn):
         cert_filename = os.path.join(cert_folder, f"{certificate_arn.split('/')[-1]}-certificate.pem.crt")
         private_key_filename = os.path.join(cert_folder, f"{certificate_arn.split('/')[-1]}-private.key")
 
-        # Save PEM certificate
+        # Save PEM format certificate
         with open(cert_filename, "w") as cert_file:
             cert_file.write(certificate_pem)
             print(f"✅ Certificate saved as {cert_filename}")
@@ -165,30 +166,30 @@ def save_certificate_to_files(certificate_pem, private_key, certificate_arn):
             private_key_file.write(private_key)
             print(f"✅ Private key saved as {private_key_filename}")      
     except Exception as e:
-        print("❌ Failed to save certificate (how is that even possible!):", str(e))
+        print("❌ Failed to save certificate (How is this even possible!!!):", str(e))
         exit(-6)
 
-# Function to create certificate
+# Create certificate function
 def create_certificate():
     try:
         cert_response = iot_client.create_keys_and_certificate(
             setAsActive=True
         )
         certificate_arn = cert_response['certificateArn']
-        certificate_id = cert_response['certificateId']
+        certificate_id = cert_response['certificateId']  # Get certificateId
         certificate_pem = cert_response['certificatePem']
         private_key = cert_response['keyPair']['PrivateKey']
 
-        # Save certificate to files
+        # Save the certificate to a file
         save_certificate_to_files(certificate_pem, private_key, certificate_arn)
 
-        # Return certificate ARN for attaching
+        # Return the certificate ARN for association
         return certificate_arn  
     except Exception as e:
-        print("❌ Failed to create certificate (how is that even possible!):", str(e))
+        print("❌ Failed to create certificate (How is this even possible!!!):", str(e))
         return None
 
-# Attach certificate to gateway
+# Associate the certificate with the gateway
 def attach_certificate_to_gateway(gateway_id, certificate_arn):
     try:
         # Get IoT certificateId using certificateArn
@@ -199,12 +200,12 @@ def attach_certificate_to_gateway(gateway_id, certificate_arn):
             Id=gateway_id,
             IotCertificateId=iot_certificate_id  # Use IotCertificateId for association
         )
-        print(f"✅ Certificate successfully attached to gateway: {response}")
+        print(f"✅ Certificate successfully associated with the gateway: {response}")
     except Exception as e:
-        print(f"❌ Failed to attach certificate: {str(e)}")
+        print(f"❌ Failed to associate certificate: {str(e)}")
         exit(-7)
 
-# Create certificate and attach it to gateway
+# Create a certificate and associate it with the gateway
 certificate_arn = create_certificate()
 if certificate_arn:
     attach_certificate_to_gateway(gateway_id, certificate_arn)
