@@ -52,9 +52,11 @@ def create_device_profile():
         response = client.create_device_profile(
             Name=DEVICE_PROFILE_NAME,
             LoRaWAN={
-                "MacVersion": "1.0.3",
-                "RegParamsRevision": "RP002-1.0.1",
-                "SupportsJoin": True
+                "MacVersion": "1.0.2",
+                "RegParamsRevision": "RP002-1.0.2b",
+                "SupportsJoin": True,
+                "RxDataRate2": 8,
+                "RxFreq2": 923300000
             }
         )
         profile_id = response["Id"]
